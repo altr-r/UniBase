@@ -1,18 +1,18 @@
 const http = require("http");
 const app = require("./app/app");
-const connection = require("./connectionDB");
+const { createConnection } = require("./connectionDB");
 const PORT = process.env.PORT;
 
-connection.connect((err) => {
-  if (err) {
-    console.log("Database connection failed");
+(async () => {
+  try {
+    const connection = await createConnection();
+
+    const server = http.createServer(app);
+    server.listen(PORT, () => {
+      console.log(`Server is running on port: ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to start server:", err);
     process.exit(1);
   }
-
-  console.log("Database connected succesfully");
-  const server = http.createServer(app);
-
-  server.listen(PORT, () => {
-    console.log(`Server is running on port: ${PORT}`);
-  });
-});
+})();
