@@ -1,10 +1,22 @@
 const { registerService, loginService } = require("../service/auth");
 
 const registerController = async (req, res) => {
-  const { name, email, password, bio, photo_url } = req.body;
+  const {
+    name,
+    email,
+    password,
+    bio,
+    photo_url,
+    role,
+    website,
+    location,
+    investorType,
+  } = req.body;
 
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: "Invalid Data" });
+  if (!name || !email || !password || !role) {
+    return res.status(400).json({
+      message: "Invalid Data: Name, email, password, and role are required",
+    });
   }
 
   try {
@@ -14,6 +26,10 @@ const registerController = async (req, res) => {
       password,
       bio,
       photo_url,
+      role,
+      website,
+      location,
+      investorType,
     });
     return res.status(201).json(result); // result is { message: "User registered successfully" }
   } catch (err) {

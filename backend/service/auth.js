@@ -11,7 +11,17 @@ const getConnection = async () => {
   return database;
 };
 
-const registerService = async ({ name, email, password, bio, photo_url }) => {
+const registerService = async ({
+  name,
+  email,
+  password,
+  bio,
+  photo_url,
+  role,
+  website,
+  location,
+  investorType,
+}) => {
   const db = await getConnection();
 
   const [existingUsers] = await db.execute(
@@ -26,12 +36,34 @@ const registerService = async ({ name, email, password, bio, photo_url }) => {
 
   const salt = await bcrypt.genSalt(10);
   const hash = await bcrypt.hash(password, salt);
-  await db.execute(
+  const [userResult] = await db.execute(
     "INSERT INTO users (name, email, password, bio, photo_url) VALUES (?, ?, ?, ?, ?)",
     [name, email, hash, bio || null, photo_url || null]
   );
 
-  return { message: "User registered successfully" };
+  const newUserId = userResult.insertId;
+
+  try {
+    if (role === "founder") {
+      await db.execute("INSERT INTO founders (user_id) VALUES (?)", [
+        newUserId,
+      ]);
+    } else if (role === "investor") {
+      await db.execute(
+        "INSERT INTO investors (user_id, type,website, location) VALUES (?, ?, ?, ?)",
+        [newUserId, investorType || null, website || null, location || null]
+      );
+    } else {
+      await db.execute("INSERT INTO general_users (user_id) VALUES (?)", [
+        newUserId,
+      ]);
+    }
+  } catch (err) {
+    await db.execute("DELETE FROM users WHERE user_id = ?", [newUserId]);
+    throw new Error("Failed to assign role: " + err.message);
+  }
+
+  return { message: `User registered successfully as ${role}` };
 };
 
 const loginService = async ({ email, password }) => {
