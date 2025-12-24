@@ -1,7 +1,16 @@
 const { createConnection } = require("../connectionDB");
 
+let database;
+
+const getConnection = async () => {
+  if (!database) {
+    database = await createConnection();
+  }
+  return database;
+};
+
 const getUserProfileService = async (userId) => {
-  const db = await createConnection();
+  const db = await getConnection();
 
   const userQuery = `
     SELECT
@@ -83,4 +92,103 @@ const getUserProfileService = async (userId) => {
   };
 };
 
-module.exports = { getUserProfileService };
+const updateUserProfileService = async (userId, data) => {
+  const db = await createConnection();
+  const { bio, photo_url, phones, expertise, website, location, type } = data;
+
+  const [roles] = await db.execute(
+    `
+    SELECT 
+      (SELECT 1 FROM Founders WHERE user_id = ?) AS is_founder,
+      (SELECT 1 FROM Investors WHERE user_id = ?) AS is_investor,
+      (SELECT 1 FROM Mentors WHERE user_id = ?) AS is_mentor
+  `,
+    [userId, userId, userId]
+  );
+
+  const userRole = roles[0];
+
+  let userUpdates = [];
+  let userParams = [];
+
+  if (bio !== undefined) {
+    userUpdates.push("bio = ?");
+    userParams.push(bio);
+  }
+  if (photo_url !== undefined) {
+    userUpdates.push("photo_url = ?");
+    userParams.push(photo_url);
+  }
+
+  if (userUpdates.length > 0) {
+    userParams.push(userId);
+    await db.execute(
+      `UPDATE Users SET ${userUpdates.join(", ")} WHERE user_id = ?`,
+      userParams
+    );
+  }
+
+  if (userRole.is_founder) {
+    if (phones && Array.isArray(phones)) {
+      await db.execute("DELETE FROM Founder_Phones WHERE user_id = ?", [
+        userId,
+      ]);
+      for (const phone of phones) {
+        await db.execute(
+          "INSERT INTO Founder_Phones (user_id, phone) VALUES (?, ?)",
+          [userId, phone]
+        );
+      }
+    }
+  } else if (phones) {
+    throw new Error("Forbidden: Only founders can set phone numbers.");
+  }
+
+  if (userRole.is_mentor) {
+    if (expertise && Array.isArray(expertise)) {
+      await db.execute("DELETE FROM Mentor_Expertise WHERE user_id = ?", [
+        userId,
+      ]);
+      for (const skill of expertise) {
+        await db.execute(
+          "INSERT INTO Mentor_Expertise (user_id, expertise) VALUES (?, ?)",
+          [userId, skill]
+        );
+      }
+    }
+  } else if (expertise) {
+    throw new Error("Forbidden: Only mentors can set expertise.");
+  }
+
+  if (userRole.is_investor) {
+    let investorUpdates = [];
+    let investorParams = [];
+
+    if (website !== undefined) {
+      investorUpdates.push("website = ?");
+      investorParams.push(website);
+    }
+    if (location !== undefined) {
+      investorUpdates.push("location = ?");
+      investorParams.push(location);
+    }
+    if (type !== undefined) {
+      investorUpdates.push("type = ?");
+      investorParams.push(type);
+    }
+
+    if (investorUpdates.length > 0) {
+      investorParams.push(userId);
+      await db.execute(
+        `UPDATE Investors SET ${investorUpdates.join(", ")} WHERE user_id = ?`,
+        investorParams
+      );
+    }
+  } else if (website || location || type) {
+    throw new Error("Forbidden: Only investors can update.");
+  }
+
+  return { message: "Profile updated successfully" };
+};
+
+module.exports = { getUserProfileService, updateUserProfileService };
