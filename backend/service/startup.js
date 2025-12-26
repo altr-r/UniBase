@@ -1,10 +1,32 @@
 const { createConnection } = require("../connectionDB");
 
-const createStartupService = async (userId, data) => {
-  const db = await createConnection();
-  const { name, description, logo_url, founding_date, status, sector, location, role, tags } = data;
+let database;
 
-  const [founderCheck] = await db.execute("SELECT 1 FROM Founders WHERE user_id = ?", [userId]);
+const getConnection = async () => {
+  if (!database) {
+    database = await createConnection();
+  }
+  return database;
+};
+
+const createStartupService = async (userId, data) => {
+  const db = await getConnection();
+  const {
+    name,
+    description,
+    logo_url,
+    founding_date,
+    status,
+    sector,
+    location,
+    role,
+    tags,
+  } = data;
+
+  const [founderCheck] = await db.execute(
+    "SELECT 1 FROM Founders WHERE user_id = ?",
+    [userId]
+  );
   if (founderCheck.length === 0) {
     const error = new Error("Only registered Founders can create a startup.");
     error.status = 403;
@@ -14,22 +36,33 @@ const createStartupService = async (userId, data) => {
   const [startupResult] = await db.execute(
     `INSERT INTO Startups (name, description, logo_url, founding_date, status, sector, location) 
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [name, description, logo_url, founding_date, status || 'Active', sector, location]
+    [
+      name,
+      description,
+      logo_url,
+      founding_date,
+      status || "Active",
+      sector,
+      location,
+    ]
   );
   const startupId = startupResult.insertId;
 
   await db.execute(
     `INSERT INTO Creates (founder_id, startup_id, role, joined_date) 
      VALUES (?, ?, ?, ?)`,
-    [userId, startupId, role || 'Founder', founding_date || new Date()]
+    [userId, startupId, role || "Founder", founding_date || new Date()]
   );
 
   if (tags && Array.isArray(tags)) {
     for (const tagName of tags) {
       await db.execute("INSERT IGNORE INTO Tags (name) VALUES (?)", [tagName]);
 
-      const [tagResult] = await db.execute("SELECT tag_id FROM Tags WHERE name = ?", [tagName]);
-      
+      const [tagResult] = await db.execute(
+        "SELECT tag_id FROM Tags WHERE name = ?",
+        [tagName]
+      );
+
       if (tagResult.length > 0) {
         await db.execute(
           "INSERT IGNORE INTO Has_Tag (startup_id, tag_id) VALUES (?, ?)",
@@ -43,7 +76,7 @@ const createStartupService = async (userId, data) => {
 };
 
 const getAllStartupsService = async (filters) => {
-  const db = await createConnection();
+  const db = await getConnection();
   let query = "SELECT * FROM Startups WHERE 1=1";
   const params = [];
 
@@ -65,9 +98,12 @@ const getAllStartupsService = async (filters) => {
 };
 
 const getStartupByIdService = async (startupId) => {
-  const db = await createConnection();
+  const db = await getConnection();
 
-  const [startups] = await db.execute("SELECT * FROM Startups WHERE startup_id = ?", [startupId]);
+  const [startups] = await db.execute(
+    "SELECT * FROM Startups WHERE startup_id = ?",
+    [startupId]
+  );
   if (startups.length === 0) {
     const error = new Error("Startup not found");
     error.status = 404;
@@ -90,25 +126,34 @@ const getStartupByIdService = async (startupId) => {
     [startupId]
   );
 
-  return { ...startup, tags: tags.map(t => t.name), founders };
+  return { ...startup, tags: tags.map((t) => t.name), founders };
 };
 
 const updateStartupService = async (userId, startupId, data) => {
-  const db = await createConnection();
+  const db = await getConnection();
 
   const [isOwner] = await db.execute(
     "SELECT 1 FROM Creates WHERE founder_id = ? AND startup_id = ?",
     [userId, startupId]
   );
   if (isOwner.length === 0) {
-    const error = new Error("Forbidden: You are not a founder of this startup.");
+    const error = new Error(
+      "Forbidden: You are not a founder of this startup."
+    );
     error.status = 403;
     throw error;
   }
 
   const updates = [];
   const params = [];
-  const allowedFields = ['name', 'description', 'logo_url', 'status', 'sector', 'location'];
+  const allowedFields = [
+    "name",
+    "description",
+    "logo_url",
+    "status",
+    "sector",
+    "location",
+  ];
 
   for (const field of allowedFields) {
     if (data[field] !== undefined) {
@@ -120,28 +165,33 @@ const updateStartupService = async (userId, startupId, data) => {
   if (updates.length === 0) return { message: "No changes provided" };
 
   params.push(startupId);
-  await db.execute(`UPDATE Startups SET ${updates.join(", ")} WHERE startup_id = ?`, params);
+  await db.execute(
+    `UPDATE Startups SET ${updates.join(", ")} WHERE startup_id = ?`,
+    params
+  );
 
   return { message: "Startup updated successfully" };
 };
 
 const deleteStartupService = async (userId, startupId) => {
-    const db = await createConnection();
+  const db = await getConnection();
 
-    const [isOwner] = await db.execute(
-        "SELECT 1 FROM Creates WHERE founder_id = ? AND startup_id = ?",
-        [userId, startupId]
+  const [isOwner] = await db.execute(
+    "SELECT 1 FROM Creates WHERE founder_id = ? AND startup_id = ?",
+    [userId, startupId]
+  );
+
+  if (isOwner.length === 0) {
+    const error = new Error(
+      "Forbidden: You are not a founder of this startup."
     );
+    error.status = 403;
+    throw error;
+  }
 
-    if (isOwner.length === 0) {
-        const error = new Error("Forbidden: You are not a founder of this startup.");
-        error.status = 403;
-        throw error;
-    }
+  await db.execute("DELETE FROM Startups WHERE startup_id = ?", [startupId]);
 
-    await db.execute("DELETE FROM Startups WHERE startup_id = ?", [startupId]);
-
-    return { message: "Startup deleted successfully" };
+  return { message: "Startup deleted successfully" };
 };
 
 module.exports = {
@@ -149,5 +199,5 @@ module.exports = {
   getAllStartupsService,
   getStartupByIdService,
   updateStartupService,
-  deleteStartupService
+  deleteStartupService,
 };

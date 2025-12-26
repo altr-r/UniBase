@@ -8,11 +8,11 @@ const {
 } = require("../controller/startup");
 const authenticateToken = require("../middleware/auth");
 
-// Public Routes
+// Can be accessed by anynone
 router.get("/", getAllStartups);
 router.get("/:id", getStartupById);
 
-// Protected Routes
+// Only logged in users can access
 router.post("/", authenticateToken, createStartup);
 router.put("/:id", authenticateToken, updateStartup);
 router.delete("/:id", authenticateToken, deleteStartup);
