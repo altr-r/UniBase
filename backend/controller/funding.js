@@ -1,4 +1,7 @@
-const { openFundingRoundService } = require("../service/funding");
+const {
+  openFundingRoundService,
+  getStartupFundingHistoryByIDService,
+} = require("../service/funding");
 
 const openFundingRound = async (req, res) => {
   const userId = req.user.userId;
@@ -18,4 +21,14 @@ const openFundingRound = async (req, res) => {
   }
 };
 
-module.exports = { openFundingRound };
+const getStartupFundingHistoryByID = async (req, res) => {
+  const { startupId } = req.params;
+  try {
+    const history = await getStartupFundingHistoryByIDService(startupId);
+    return res.status(200).json(history);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { openFundingRound, getStartupFundingHistoryByID };

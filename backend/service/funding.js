@@ -49,4 +49,41 @@ const openFundingRoundService = async (userId, data) => {
   };
 };
 
-module.exports = { openFundingRoundService };
+const getStartupFundingHistoryByIDService = async (startupId) => {
+  const db = await getConnection();
+
+  const [rounds] = await db.execute(
+    "SELECT * FROM Funding_Rounds WHERE startup_id = ? ORDER BY round_seq ASC",
+    [startupId]
+  );
+
+
+  const [investments] = await db.execute(
+    `
+    SELECT 
+      round_seq, 
+      COUNT(investor_id) as investor_count, 
+      SUM(amount) as raised_so_far
+    FROM Invests 
+    WHERE startup_id = ?
+    GROUP BY round_seq
+  `,
+    [startupId]
+  );
+
+  const history = rounds.map((round) => {
+    const invData = investments.find(
+      (inv) => inv.round_seq === round.round_seq
+    );
+    return {
+      ...round,
+      raised_amount: invData ? invData.raised_so_far : 0,
+      investor_count: invData ? invData.investor_count : 0,
+      target_met: invData && invData.raised_so_far >= round.amount,
+    };
+  });
+
+  return history;
+};
+
+module.exports = { openFundingRoundService, getStartupFundingHistoryByIDService };
