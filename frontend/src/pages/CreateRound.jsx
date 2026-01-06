@@ -52,12 +52,17 @@ const CreateRound = () => {
     try {
       await openFundingRound({
         startup_id: id,
-        ...formData,
+
+        amount: formData.target_amount,
+        label: formData.round_name,
+        date: formData.round_date,
       });
+
       toast.success(`${formData.round_name} Round Opened!`);
       navigate(`/startup/${id}`);
     } catch (error) {
-      toast.error(error.response?.data?.error || "Failed to open round");
+      console.error(error); // Helpful for debugging
+      toast.error(error.response?.data?.message || "Failed to open round");
     }
   };
 
