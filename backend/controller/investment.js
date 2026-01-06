@@ -4,17 +4,21 @@ const {
 } = require("../service/investment");
 
 const makeInvestment = async (req, res) => {
-  const userId = req.user.userId;
-  const data = req.body;
+  const { startup_id, amount, round_seq, equity } = req.body; // <--- Extract 'equity'
+  const investor_id = req.user.userId;
 
-  if (!data.startup_id || !data.round_seq || !data.amount) {
-    return res.status(400).json({
-      message: "Startup ID, Round Sequence, and Amount are required.",
-    });
+  if (!startup_id || !amount || !round_seq) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
   try {
-    const result = await makeInvestmentService(userId, data);
+    const result = await makeInvestmentService(
+      investor_id,
+      startup_id,
+      amount,
+      round_seq,
+      equity
+    );
     return res.status(201).json(result);
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message });

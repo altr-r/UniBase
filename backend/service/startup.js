@@ -84,16 +84,45 @@ const getAllStartupsService = async (filters) => {
     query += " AND sector = ?";
     params.push(filters.sector);
   }
+
   if (filters.name) {
     query += " AND name LIKE ?";
     params.push(`%${filters.name}%`);
   }
+
   if (filters.status) {
     query += " AND status = ?";
     params.push(filters.status);
   }
 
+  // --- NEW: Add Tag Filtering Logic ---
+  // We check if the startup_id exists in the list of startups that have this tag
+  if (filters.tags) {
+    query += ` AND startup_id IN (
+      SELECT ht.startup_id 
+      FROM Has_Tag ht 
+      JOIN Tags t ON ht.tag_id = t.tag_id 
+      WHERE t.name LIKE ?
+    )`;
+    params.push(`%${filters.tags}%`); // Partial match (e.g., "AI" matches "GenAI")
+  }
+
   const [rows] = await db.execute(query, params);
+
+  // Optional: Fetch tags for each startup to display them on the card
+  // (This is a "nice to have" - you can skip if you just want filtering)
+  for (let startup of rows) {
+    const [tags] = await db.execute(
+      `
+      SELECT t.name FROM Tags t
+      JOIN Has_Tag ht ON t.tag_id = ht.tag_id
+      WHERE ht.startup_id = ?
+    `,
+      [startup.startup_id]
+    );
+    startup.tags = tags.map((t) => t.name);
+  }
+
   return rows;
 };
 
@@ -162,13 +191,38 @@ const updateStartupService = async (userId, startupId, data) => {
     }
   }
 
-  if (updates.length === 0) return { message: "No changes provided" };
+  if (updates.length > 0) {
+    params.push(startupId);
+    await db.execute(
+      `UPDATE Startups SET ${updates.join(", ")} WHERE startup_id = ?`,
+      params
+    );
+  }
 
-  params.push(startupId);
-  await db.execute(
-    `UPDATE Startups SET ${updates.join(", ")} WHERE startup_id = ?`,
-    params
-  );
+  if (data.tags && Array.isArray(data.tags)) {
+    await db.execute("DELETE FROM Has_Tag WHERE startup_id = ?", [startupId]);
+
+    for (const tagName of data.tags) {
+      const cleanedTag = tagName.trim();
+      if (cleanedTag) {
+        await db.execute("INSERT IGNORE INTO Tags (name) VALUES (?)", [
+          cleanedTag,
+        ]);
+
+        const [tagResult] = await db.execute(
+          "SELECT tag_id FROM Tags WHERE name = ?",
+          [cleanedTag]
+        );
+
+        if (tagResult.length > 0) {
+          await db.execute(
+            "INSERT IGNORE INTO Has_Tag (startup_id, tag_id) VALUES (?, ?)",
+            [startupId, tagResult[0].tag_id]
+          );
+        }
+      }
+    }
+  }
 
   return { message: "Startup updated successfully" };
 };
@@ -194,10 +248,47 @@ const deleteStartupService = async (userId, startupId) => {
   return { message: "Startup deleted successfully" };
 };
 
+const getMyStartupsService = async (userId) => {
+  const db = await getConnection();
+  const [rows] = await db.execute(
+    `
+    SELECT s.* FROM Startups s
+    JOIN Creates c ON s.startup_id = c.startup_id
+    WHERE c.founder_id = ?
+  `,
+    [userId]
+  );
+  return rows;
+};
+
+const getUniqueSectorsService = async () => {
+  const db = await getConnection();
+  // Get all unique, non-empty sectors, sorted alphabetically
+  const [rows] = await db.execute(`
+    SELECT DISTINCT sector 
+    FROM Startups 
+    WHERE sector IS NOT NULL AND sector != '' 
+    ORDER BY sector ASC
+  `);
+  // Transform [{sector: 'AI'}, {sector: 'SaaS'}] -> ['AI', 'SaaS']
+  return rows.map(row => row.sector);
+};
+
+const getAllTagsService = async () => {
+  const db = await getConnection();
+  // Changed "SELECT name" -> "SELECT DISTINCT name"
+  // This guarantees the frontend never gets duplicates
+  const [rows] = await db.execute("SELECT DISTINCT name FROM Tags ORDER BY name ASC");
+  return rows.map(r => r.name);
+};
+
 module.exports = {
   createStartupService,
   getAllStartupsService,
   getStartupByIdService,
   updateStartupService,
   deleteStartupService,
+  getMyStartupsService,
+  getUniqueSectorsService,
+  getAllTagsService
 };

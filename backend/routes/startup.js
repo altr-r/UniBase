@@ -4,17 +4,24 @@ const {
   getAllStartups,
   getStartupById,
   updateStartup,
-  deleteStartup
+  deleteStartup,
+  getMyStartups,
+  getSectors,
+  getTags
 } = require("../controller/startup");
 const authenticateToken = require("../middleware/auth");
 
-// Can be accessed by anynone
 router.get("/", getAllStartups);
-router.get("/:id", getStartupById);
-
-// Only logged in users can access
 router.post("/", authenticateToken, createStartup);
+
+router.get("/me", authenticateToken, getMyStartups);
+router.get("/sectors", getSectors);
+router.get("/tags", getTags);
+
+router.get("/:id", getStartupById);
 router.put("/:id", authenticateToken, updateStartup);
 router.delete("/:id", authenticateToken, deleteStartup);
+
+
 
 module.exports = router;

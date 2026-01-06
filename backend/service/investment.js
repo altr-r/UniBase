@@ -8,44 +8,36 @@ const getConnection = async () => {
   return database;
 };
 
-const makeInvestmentService = async (userId, data) => {
+const makeInvestmentService = async (
+  investorId,
+  startupId,
+  amount,
+  roundSeq,
+  equity
+) => {
   const db = await getConnection();
-  const { startup_id, round_seq, amount, equity_share } = data;
 
-  const [investorCheck] = await db.execute(
-    "SELECT 1 FROM Investors WHERE user_id = ?",
-    [userId]
+  // 1. Verify Investor Role
+  const [roleCheck] = await db.execute(
+    "SELECT 1 FROM investors WHERE user_id = ?",
+    [investorId]
   );
-
-  if (investorCheck.length === 0) {
-    const error = new Error(
-      "Permission Denied: Only registered Investors can make investments."
-    );
+  if (roleCheck.length === 0) {
+    const error = new Error("Only investors can make investments");
     error.status = 403;
     throw error;
   }
 
-  const [roundCheck] = await db.execute(
-    "SELECT 1 FROM Funding_Rounds WHERE startup_id = ? AND round_seq = ?",
-    [startup_id, round_seq]
-  );
-
-  if (roundCheck.length === 0) {
-    const error = new Error("Funding Round not found.");
-    error.status = 404;
-    throw error;
-  }
-
+  // 2. Insert Investment (NOW WITH EQUITY)
+  // We use "ON DUPLICATE KEY UPDATE" just in case they invest twice in the same round
   await db.execute(
     `INSERT INTO Invests (investor_id, startup_id, round_seq, amount, equity_share) 
-     VALUES (?, ?, ?, ?, ?)`,
-    [userId, startup_id, round_seq, amount, equity_share || 0]
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE amount = amount + VALUES(amount), equity_share = equity_share + VALUES(equity_share)`,
+    [investorId, startupId, roundSeq, amount, equity || 0] // Default to 0 if null
   );
 
-  return {
-    message: "Investment successful!",
-    investment: { startup_id, round_seq, amount, equity_share },
-  };
+  return { message: "Investment successful" };
 };
 
 const getInvestorPortfolioService = async (userId) => {

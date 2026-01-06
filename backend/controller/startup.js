@@ -3,7 +3,10 @@ const {
   getAllStartupsService,
   getStartupByIdService,
   updateStartupService,
-  deleteStartupService
+  deleteStartupService,
+  getMyStartupsService,
+  getUniqueSectorsService,
+  getAllTagsService
 } = require("../service/startup");
 
 const createStartup = async (req, res) => {
@@ -68,10 +71,39 @@ const deleteStartup = async (req, res) => {
     }
 }
 
+const getMyStartups = async (req, res) => {
+  const userId = req.user.userId;
+  try {
+    const startups = await getMyStartupsService(userId);
+    return res.status(200).json(startups);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+const getSectors = async (req, res) => {
+  try {
+    const sectors = await getUniqueSectorsService();
+    return res.status(200).json(sectors);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+const getTags = async (req, res) => {
+    try {
+        const tags = await getAllTagsService();
+        res.json(tags);
+    } catch (e) { res.status(500).json({error: e.message}); }
+};
+
 module.exports = {
   createStartup,
   getAllStartups,
   getStartupById,
   updateStartup,
-  deleteStartup
+  deleteStartup,
+  getMyStartups,
+  getSectors,
+  getTags
 };
