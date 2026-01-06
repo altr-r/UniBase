@@ -5,7 +5,7 @@ export const makeInvestment = async (startupId, roundSeq, amount, equity) => {
     startup_id: startupId,
     round_seq: roundSeq,
     amount,
-    equity, // <--- Send this to backend
+    equity,
   });
   return response.data;
 };

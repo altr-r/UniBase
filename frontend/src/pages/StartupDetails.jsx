@@ -47,7 +47,7 @@ const StartupDetails = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
 
-  // --- NEW: MODAL STATE ---
+  // MODAL STATE
   const [showInvestModal, setShowInvestModal] = useState(false);
   const [selectedRound, setSelectedRound] = useState(null);
   const [investAmount, setInvestAmount] = useState("");
@@ -90,7 +90,6 @@ const StartupDetails = () => {
 
       try {
         const analyticsData = await getStartupAnalytics(id);
-        console.log(analyticsData);
         setAnalytics(analyticsData);
       } catch (e) {
         console.log(e);

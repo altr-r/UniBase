@@ -14,13 +14,12 @@ const Home = () => {
     name: "",
     sector: "",
     status: "",
-    tags: "", // <--- Added Tag Filter
+    tags: "",
   });
 
   const fetchStartups = async (overrideFilters = null) => {
     setLoading(true);
     try {
-      // Backend expects 'tags' as a string for partial match (e.g. "AI")
       const query = overrideFilters ?? filters;
       const data = await getAllStartups(query);
       setStartups(data);

@@ -13,6 +13,7 @@ export const getAllStartups = async (filters = {}) => {
   const response = await api.get(`/startups${params ? `?${params}` : ""}`);
   return response.data;
 };
+
 // Get one startup by ID
 export const getStartupById = async (id) => {
   const response = await api.get(`/startups/${id}`);
@@ -30,22 +31,25 @@ export const getMyStartups = async () => {
   return response.data;
 };
 
+// update startup
 export const updateStartup = async (id, data) => {
   const response = await api.put(`/startups/${id}`, data);
   return response.data;
 };
 
+// deleting startup
 export const deleteStartup = async (id) => {
   const response = await api.delete(`/startups/${id}`);
   return response.data;
 };
 
-// Add this new function
+// get all the existing sectors
 export const getSectors = async () => {
   const response = await api.get("/startups/sectors");
   return response.data;
 };
 
+// get all the existing tags
 export const getTags = async () => {
   const response = await api.get('/startups/tags');
   return response.data;

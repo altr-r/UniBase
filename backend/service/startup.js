@@ -34,7 +34,7 @@ const createStartupService = async (userId, data) => {
   }
 
   const [startupResult] = await db.execute(
-    `INSERT INTO Startups (name, description, logo_url, founding_date, status, sector, location) 
+    `INSERT INTO Startups (name, description, logo_url, founding_date, status, sector, location)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       name,
@@ -49,7 +49,7 @@ const createStartupService = async (userId, data) => {
   const startupId = startupResult.insertId;
 
   await db.execute(
-    `INSERT INTO Creates (founder_id, startup_id, role, joined_date) 
+    `INSERT INTO Creates (founder_id, startup_id, role, joined_date)
      VALUES (?, ?, ?, ?)`,
     [userId, startupId, role || "Founder", founding_date || new Date()]
   );
@@ -95,13 +95,11 @@ const getAllStartupsService = async (filters) => {
     params.push(filters.status);
   }
 
-  // --- NEW: Add Tag Filtering Logic ---
-  // We check if the startup_id exists in the list of startups that have this tag
   if (filters.tags) {
     query += ` AND startup_id IN (
-      SELECT ht.startup_id 
-      FROM Has_Tag ht 
-      JOIN Tags t ON ht.tag_id = t.tag_id 
+      SELECT ht.startup_id
+      FROM Has_Tag ht
+      JOIN Tags t ON ht.tag_id = t.tag_id
       WHERE t.name LIKE ?
     )`;
     params.push(`%${filters.tags}%`); // Partial match (e.g., "AI" matches "GenAI")
@@ -109,8 +107,6 @@ const getAllStartupsService = async (filters) => {
 
   const [rows] = await db.execute(query, params);
 
-  // Optional: Fetch tags for each startup to display them on the card
-  // (This is a "nice to have" - you can skip if you just want filtering)
   for (let startup of rows) {
     const [tags] = await db.execute(
       `
@@ -141,14 +137,14 @@ const getStartupByIdService = async (startupId) => {
   const startup = startups[0];
 
   const [tags] = await db.execute(
-    `SELECT t.name FROM Tags t 
-     JOIN Has_Tag ht ON t.tag_id = ht.tag_id 
+    `SELECT t.name FROM Tags t
+     JOIN Has_Tag ht ON t.tag_id = ht.tag_id
      WHERE ht.startup_id = ?`,
     [startupId]
   );
 
   const [founders] = await db.execute(
-    `SELECT u.user_id, u.name, u.photo_url, c.role 
+    `SELECT u.user_id, u.name, u.photo_url, c.role
      FROM Users u
      JOIN Creates c ON u.user_id = c.founder_id
      WHERE c.startup_id = ?`,
@@ -265,19 +261,16 @@ const getUniqueSectorsService = async () => {
   const db = await getConnection();
   // Get all unique, non-empty sectors, sorted alphabetically
   const [rows] = await db.execute(`
-    SELECT DISTINCT sector 
-    FROM Startups 
-    WHERE sector IS NOT NULL AND sector != '' 
+    SELECT DISTINCT sector
+    FROM Startups
+    WHERE sector IS NOT NULL AND sector != ''
     ORDER BY sector ASC
   `);
-  // Transform [{sector: 'AI'}, {sector: 'SaaS'}] -> ['AI', 'SaaS']
   return rows.map(row => row.sector);
 };
 
 const getAllTagsService = async () => {
   const db = await getConnection();
-  // Changed "SELECT name" -> "SELECT DISTINCT name"
-  // This guarantees the frontend never gets duplicates
   const [rows] = await db.execute("SELECT DISTINCT name FROM Tags ORDER BY name ASC");
   return rows.map(r => r.name);
 };

@@ -20,6 +20,7 @@ import {
   Trash2,
   Rocket,
   ArrowRight,
+  Camera,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -199,6 +200,24 @@ const Profile = () => {
             </div>
 
             <div className="space-y-4">
+              {isEditing && (
+                <div>
+                  <h3 className="font-bold text-gray-800 mb-2 flex items-center">
+                    <Camera className="w-4 h-4 mr-2" /> Profile Photo URL
+                  </h3>
+                  <input
+                    className="w-full border rounded px-3 py-2 text-sm"
+                    placeholder="https://example.com/photo.jpg"
+                    value={formData.photo_url}
+                    onChange={(e) =>
+                      setFormData({ ...formData, photo_url: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Paste a direct link to an image (JPG, PNG).
+                  </p>
+                </div>
+              )}
               {isInvestor && (
                 <>
                   <div>

@@ -10,7 +10,7 @@ const Register = () => {
     name: "",
     email: "",
     password: "",
-    photo_url: "", // <--- Added this field
+    photo_url: "",
     role: "founder",
     bio: "",
     investorType: "Angel",

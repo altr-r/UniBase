@@ -182,7 +182,7 @@ const CreateStartup = () => {
               <input
                 className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="e.g. SaaS, AI, BioTech..."
-                list="sector-options" // Connects to the datalist below
+                list="sector-options"
                 value={formData.sector}
                 onChange={(e) =>
                   setFormData({ ...formData, sector: e.target.value })

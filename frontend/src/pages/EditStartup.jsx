@@ -4,7 +4,7 @@ import {
   getStartupById,
   updateStartup,
   deleteStartup,
-} from "../services/startups"; // <--- Added deleteStartup
+} from "../services/startups";
 import { toast } from "react-hot-toast";
 import { Edit, Save, ArrowLeft, Tag, Trash2 } from "lucide-react"; // <--- Added Trash2
 
@@ -70,7 +70,7 @@ const EditStartup = () => {
     }
   };
 
-  // --- NEW DELETE HANDLER ---
+  // --- DELETE HANDLER ---
   const handleDelete = async () => {
     if (
       !window.confirm(

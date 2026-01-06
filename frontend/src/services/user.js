@@ -10,5 +10,5 @@ export const updateProfile = async (data) => {
   return response.data;
 };
 
-// Also reuse the portfolio service we made earlier for investors
+
 export { getMyPortfolio as getInvestorPortfolio } from "./investment";
